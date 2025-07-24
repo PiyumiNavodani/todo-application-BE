@@ -31,9 +31,9 @@ public class TaskController {
     private final TaskService taskService;
 
     /**
-     * This is the endpoint for create new to-do task
-     * @param taskRequestDto
-     * @return ResponseEntity
+     * This is the endpoint to create a new to-do task
+     * @param task
+     * @return Task
      */
     @PostMapping
     public Task createTask(@RequestBody final Task task){
@@ -42,47 +42,76 @@ public class TaskController {
     }
 
     /**
-     * This is the endpoint to get most recent 5 to-do tasks
-     * @return ResponseEntity
+     * This is the endpoint to edit a task
+     * @param id
+     * @param task
+     * @return Task
      */
     @PutMapping("/{id}")
     public Task updateTask(@PathVariable final UUID id, @RequestBody Task task){
-        log.info("TaskController.getTasksList() started...");
+        log.info("TaskController.updateTask() started...");
         return taskService.updateTask(id, task);
     }
 
     /**
-     * This is the endpoint to update the task status when it is done
-     * @param taskUpdateDto
-     * @return ResponseEntity
+     * This is the end point to update the task as done by checked the checkbox
+     * @param id
+     * @param task
+     * @return Task
      */
     @PatchMapping("/{id}")
     public Task toggleComplete(@PathVariable final UUID id, @RequestBody Task task){
-        log.info("TaskController.updateTaskStatus() started...");
+        log.info("TaskController.toggleComplete() started...");
         return taskService.toggleCompletion(id, task.isCompleted());
     }
 
+    /**
+     * This is the endpoint to get tasks list
+     * @param search
+     * @param completed
+     * @param dueDate
+     * @param filterType
+     * @return tasksList
+     */
     @GetMapping
     public List<Task> getTasks(@RequestParam(required = false) String search,
                                @RequestParam(required = false) Boolean completed,
                                @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate dueDate,
                                @RequestParam(required = false) String filterType){
-        log.info("TaskController.updateTaskStatus() started...");
+        log.info("TaskController.getTasks() started...");
         return taskService.getTasks(search, completed, dueDate, filterType);
     }
 
+    /**
+     * This is the end point to get the task by task id
+     * @param id
+     * @return task
+     */
     @GetMapping("/{id}")
     public Task getTaskById(@PathVariable UUID id){
+        log.info("TaskController.getTaskById() started...");
         return taskService.getTaskById(id);
     }
 
+    /**
+     * This is the end point to delete a task
+     * @param id
+     */
     @DeleteMapping("/{id}")
     public void deleteTask(@PathVariable UUID id){
+        log.info("TaskController.deleteTask() started...");
         taskService.deletTask(id);
     }
 
+    /**
+     * This is the end point to add comments to the task
+     * @param id
+     * @param comment
+     * @return
+     */
     @PostMapping("/{id}/comments")
     public Task addComment(@PathVariable UUID id, @RequestBody Comment comment){
+        log.info("TaskController.addComment() started...");
         return taskService.addComment(id, comment);
     }
 }
