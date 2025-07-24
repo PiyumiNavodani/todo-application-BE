@@ -1,5 +1,6 @@
 package com.todo.todo_list.entity;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -27,6 +28,7 @@ public class Comment {
     private UUID id;
 
     private String text;
+    @JsonFormat(pattern = "MMM dd, yyyy HH:mm", timezone = "Asia/Colombo")
     private LocalDateTime timeStamp;
 
     @JsonIgnore

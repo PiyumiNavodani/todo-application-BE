@@ -52,6 +52,7 @@ public class TaskServiceImpl implements TaskService {
             task.setId(null);
             task.setCreatedAt(LocalDateTime.now());
             task.setUpdatedAt(LocalDateTime.now());
+            task.setPriority(task.getPriority());
 
             Task savedTask = taskRepository.save(task);
 
@@ -85,6 +86,7 @@ public class TaskServiceImpl implements TaskService {
             task.setDueDate(updated.getDueDate());
             task.setUpdatedAt(LocalDateTime.now());
             task.setCompleted(updated.isCompleted());
+            task.setPriority(updated.getPriority());
 
             Task savedTask = taskRepository.save(task);
 
@@ -194,7 +196,7 @@ public class TaskServiceImpl implements TaskService {
     public List<Task> getTasks(String search, Boolean completed, LocalDate dueDate, String filterType) {
         log.info("TaskServiceImpl.getTasks() started.");
         try {
-            return taskRepository.findAll();
+            return taskRepository.findTop5ByOrderByCreatedAtDesc();
         } catch (Exception e) {
             log.error("Error while fetching tasks list: {}", e.getMessage(), e);
             throw new RuntimeException("Failed to fetch tasks", e);
@@ -223,6 +225,7 @@ public class TaskServiceImpl implements TaskService {
             comment.setId(null);
             comment.setText(comment.getText());
             comment.setTimeStamp(LocalDateTime.now());
+            comment.setTask(task);
             task.getComments().add(comment);
             commentRepository.save(comment);
             Task savedTask = taskRepository.save(task);

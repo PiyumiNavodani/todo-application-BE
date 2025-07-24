@@ -1,5 +1,6 @@
 package com.todo.todo_list.entity;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.GenericGenerator;
@@ -30,8 +31,11 @@ public class Task {
     private String description;
     private LocalDate dueDate;
     private boolean completed;
+    @JsonFormat(pattern = "MMM dd, yyyy HH:mm", timezone = "Asia/Colombo")
     private LocalDateTime createdAt;
+    @JsonFormat(pattern = "MMM dd, yyyy HH:mm", timezone = "Asia/Colombo")
     private LocalDateTime updatedAt;
+    private String priority;
 
     @OneToMany(mappedBy = "task", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<Comment> comments = new ArrayList<>();

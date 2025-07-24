@@ -11,9 +11,11 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import java.util.ArrayList;
-import java.util.Optional;
-import java.util.UUID;
+import org.springframework.dao.EmptyResultDataAccessException;
+
+import java.time.LocalDateTime;
+import java.util.*;
+
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
@@ -23,7 +25,7 @@ import static org.mockito.Mockito.when;
  * @author by piyumi_navodani
  */
 @ExtendWith(MockitoExtension.class)
-public class TaskServiceImplUnitTest {
+class TaskServiceImplUnitTest {
     @Mock
     private TaskRepository taskRepository;
 
@@ -34,7 +36,7 @@ public class TaskServiceImplUnitTest {
     private TaskServiceImpl taskService;
 
     @Test
-    void testCreateTask() {
+    void testCreateTask_success() {
         Task task = new Task();
         task.setTitle("New Task");
 
@@ -52,7 +54,22 @@ public class TaskServiceImplUnitTest {
     }
 
     @Test
-    void testUpdateTask() {
+    void testCreateTask_whenExceptionThrown() {
+        Task task = new Task();
+        task.setTitle("New Task");
+
+        when(taskRepository.save(any(Task.class))).thenThrow(new RuntimeException("DB error"));
+
+        RuntimeException exception = assertThrows(RuntimeException.class, () -> {
+            taskService.createTask(task);
+        });
+
+        assertEquals("Failed to create task", exception.getMessage());
+        verify(taskRepository, times(1)).save(any(Task.class));
+    }
+
+    @Test
+    void testUpdateTask_success() {
         UUID id = UUID.randomUUID();
         Task existing = new Task();
         existing.setId(id);
@@ -72,7 +89,15 @@ public class TaskServiceImplUnitTest {
     }
 
     @Test
-    void testToggleCompletion() {
+    void testUpdateTask_nullArguments() {
+        UUID id = UUID.randomUUID();
+
+        assertThrows(IllegalArgumentException.class, () -> taskService.updateTask(null, new Task()));
+        assertThrows(IllegalArgumentException.class, () -> taskService.updateTask(id, null));
+    }
+
+    @Test
+    void testToggleCompletion_success() {
         UUID id = UUID.randomUUID();
         Task task = new Task();
         task.setId(id);
@@ -87,7 +112,12 @@ public class TaskServiceImplUnitTest {
     }
 
     @Test
-    void testDeleteTask() {
+    void testToggleCompletion_nullId() {
+        assertThrows(IllegalArgumentException.class, () -> taskService.toggleCompletion(null, true));
+    }
+
+    @Test
+    void testDeleteTask_success() {
         UUID id = UUID.randomUUID();
 
         doNothing().when(taskRepository).deleteById(id);
@@ -98,7 +128,38 @@ public class TaskServiceImplUnitTest {
     }
 
     @Test
-    void testAddComment() {
+    void testDeletTask_nullId() {
+        assertThrows(IllegalArgumentException.class, () -> taskService.deletTask(null));
+    }
+
+    @Test
+    void testDeletTask_emptyResultDataAccessException() {
+        UUID id = UUID.randomUUID();
+
+        doThrow(new EmptyResultDataAccessException(1)).when(taskRepository).deleteById(id);
+
+        EntityNotFoundException ex = assertThrows(EntityNotFoundException.class, () -> {
+            taskService.deletTask(id);
+        });
+
+        assertTrue(ex.getMessage().contains(id.toString()));
+    }
+
+    @Test
+    void testDeletTask_runtimeException() {
+        UUID id = UUID.randomUUID();
+
+        doThrow(new RuntimeException("DB error")).when(taskRepository).deleteById(id);
+
+        RuntimeException ex = assertThrows(RuntimeException.class, () -> {
+            taskService.deletTask(id);
+        });
+
+        assertEquals("Failed to delete task", ex.getMessage());
+    }
+
+    @Test
+    void testAddComment_success() {
         UUID taskId = UUID.randomUUID();
         Task task = new Task();
         task.setId(taskId);
@@ -118,10 +179,70 @@ public class TaskServiceImplUnitTest {
     }
 
     @Test
+    void testAddComment_nullTaskId() {
+        Comment comment = new Comment();
+        comment.setText("Sample");
+
+        assertThrows(IllegalArgumentException.class, () -> taskService.addComment(null, comment));
+    }
+
+    @Test
+    void testAddComment_nullComment() {
+        UUID taskId = UUID.randomUUID();
+
+        assertThrows(IllegalArgumentException.class, () -> taskService.addComment(taskId, null));
+    }
+
+    @Test
     void testGetTaskById_NotFound() {
         UUID id = UUID.randomUUID();
         when(taskRepository.findById(id)).thenReturn(Optional.empty());
 
         assertThrows(EntityNotFoundException.class, () -> taskService.getTaskById(id));
     }
+
+    @Test
+    void testGetTaskById_success() {
+        UUID id = UUID.randomUUID();
+        Task mockTask = new Task();
+        mockTask.setId(id);
+        mockTask.setTitle("Sample Task");
+
+        when(taskRepository.findById(id)).thenReturn(Optional.of(mockTask));
+
+        Task result = taskService.getTaskById(id);
+
+        assertNotNull(result);
+        assertEquals(id, result.getId());
+        assertEquals("Sample Task", result.getTitle());
+        verify(taskRepository, times(1)).findById(id);
+    }
+    @Test
+    void testGetTasks_ReturnsTop5Tasks() {
+        List<Task> mockTasks = Arrays.asList(
+                Task.builder().id(UUID.randomUUID()).title("Task 1").createdAt(LocalDateTime.now()).build(),
+                Task.builder().id(UUID.randomUUID()).title("Task 2").createdAt(LocalDateTime.now()).build()
+        );
+        when(taskRepository.findTop5ByOrderByCreatedAtDesc()).thenReturn(mockTasks);
+
+        List<Task> result = taskService.getTasks(null, null, null, null);
+
+        assertNotNull(result);
+        assertEquals(2, result.size());
+        verify(taskRepository, times(1)).findTop5ByOrderByCreatedAtDesc();
+    }
+
+    @Test
+    void testGetTasks_ThrowsRuntimeExceptionOnFailure() {
+        // Arrange
+        when(taskRepository.findTop5ByOrderByCreatedAtDesc()).thenThrow(new RuntimeException("DB Error"));
+
+        // Act & Assert
+        RuntimeException exception = assertThrows(RuntimeException.class, () ->
+                taskService.getTasks(null, null, null, null)
+        );
+        assertEquals("Failed to fetch tasks", exception.getMessage());
+        verify(taskRepository, times(1)).findTop5ByOrderByCreatedAtDesc();
+    }
+
 }
